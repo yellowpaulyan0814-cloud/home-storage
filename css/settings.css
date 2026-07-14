@@ -1,0 +1,214 @@
+/**
+ * 家庭收纳管理系统 — 设置页面样式
+ */
+
+.settings-content {
+    padding-bottom: var(--space-xl);
+}
+
+.settings-loading {
+    text-align: center;
+    padding: var(--space-2xl);
+    color: var(--color-text-secondary);
+}
+
+.settings-error {
+    text-align: center;
+    padding: var(--space-2xl);
+    color: var(--color-danger);
+}
+
+/* ============================================================
+   分区
+   ============================================================ */
+
+.settings-section {
+    margin-bottom: var(--space-xl);
+}
+
+.settings-section-title {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space);
+    text-transform: none;
+    letter-spacing: -0.2px;
+}
+
+/* ============================================================
+   统计卡片
+   ============================================================ */
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: var(--space-sm);
+}
+
+.stat-card {
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius);
+    padding: var(--space);
+    text-align: center;
+    transition: background var(--transition);
+}
+
+.stat-card.stat-total {
+    background: var(--color-accent);
+    color: #fff;
+    grid-column: 1 / -1;
+}
+
+.stat-card.stat-total .stat-card-label {
+    color: rgba(255,255,255,0.8);
+}
+
+.stat-card-icon {
+    font-size: 28px;
+    margin-bottom: 4px;
+}
+
+.stat-card-value {
+    font-size: var(--text-2xl);
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.stat-card-label {
+    font-size: var(--text-xs);
+    color: var(--color-text-tertiary);
+    margin-top: 2px;
+}
+
+/* ============================================================
+   最近更新
+   ============================================================ */
+
+.recent-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.recent-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space);
+    padding: 10px 12px;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background var(--transition);
+}
+
+.recent-item:hover {
+    background: var(--color-bg-secondary);
+}
+
+.recent-name {
+    font-size: var(--text-sm);
+    font-weight: 500;
+    flex: 1;
+}
+
+.recent-location {
+    font-size: var(--text-xs);
+    color: var(--color-text-tertiary);
+}
+
+.recent-time {
+    font-size: 11px;
+    color: var(--color-text-tertiary);
+    white-space: nowrap;
+}
+
+/* ============================================================
+   操作项
+   ============================================================ */
+
+.settings-action {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space);
+    padding: var(--space);
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius);
+    margin-bottom: var(--space-sm);
+}
+
+.settings-action-danger {
+    background: var(--color-danger-light);
+}
+
+.settings-action-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.settings-action-title {
+    font-size: var(--text-sm);
+    font-weight: 600;
+    margin-bottom: 2px;
+}
+
+.settings-action-desc {
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    line-height: 1.4;
+}
+
+/* ============================================================
+   关于
+   ============================================================ */
+
+.about-info {
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+.about-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px var(--space);
+    border-bottom: 1px solid var(--color-border-light);
+}
+
+.about-row:last-child {
+    border-bottom: none;
+}
+
+.about-label {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+}
+
+.about-value {
+    font-size: var(--text-sm);
+    font-weight: 500;
+}
+
+/* ============================================================
+   响应式
+   ============================================================ */
+
+@media (max-width: 480px) {
+    .settings-action {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .settings-action .btn {
+        width: 100%;
+    }
+
+    .recent-item {
+        flex-wrap: wrap;
+    }
+
+    .recent-time {
+        width: 100%;
+        margin-left: 0;
+    }
+}

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="description" content="家庭收纳管理系统 - 记录物品存放位置，快速查找">
+    <meta name="theme-color" content="#ffffff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="家庭收纳">
+    <title>家庭收纳管理</title>
+
+    <!-- 样式表 -->
+    <link rel="stylesheet" href="css/main.css">
+    <link rel="stylesheet" href="css/search.css">
+    <link rel="stylesheet" href="css/add.css">
+    <link rel="stylesheet" href="css/map.css">
+    <link rel="stylesheet" href="css/settings.css">
+
+    <!-- Favicon（使用 emoji SVG） -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
+
+    <style>
+        /* 启动加载状态 */
+        #app-loading {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #ffffff;
+            z-index: 999;
+            font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        }
+        #app-loading .loading-icon {
+            font-size: 48px;
+            animation: loadingBounce 1s ease-in-out infinite;
+        }
+        @keyframes loadingBounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-12px); }
+        }
+        #app-loading .loading-text {
+            margin-top: 16px;
+            font-size: 14px;
+            color: #86868b;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 启动画面 -->
+    <div id="app-loading">
+        <div class="loading-icon">🏠</div>
+        <div class="loading-text">家庭收纳管理 · 加载中</div>
+    </div>
+
+    <!-- 应用根节点 -->
+    <div id="app"></div>
+
+    <!--
+        脚本加载顺序（依赖关系）：
+        1. config.js   — 房间/柜子配置（无依赖）
+        2. utils.js    — 工具函数（无依赖）
+        3. db.js       — 数据库层（依赖 utils）
+        4. router.js   — 路由模块（依赖 utils）
+        5. search.js   — 搜索页面（依赖 db, config, utils）
+        6. add.js      — 新增页面（依赖 db, config, utils）
+        7. detail.js   — 详情弹窗（依赖 db, config, utils）
+        8. map.js      — 地图页面（依赖 db, config, utils）
+        9. settings.js — 设置页面（依赖 db, config, utils）
+        10. app.js     — 主入口（依赖以上所有模块）
+    -->
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/db.js"></script>
+    <script src="js/cloud.js"></script>
+    <script src="js/router.js"></script>
+    <script src="js/search.js"></script>
+    <script src="js/add.js"></script>
+    <script src="js/detail.js"></script>
+    <script src="js/map.js"></script>
+    <script src="js/settings.js"></script>
+    <script src="js/app.js"></script>
+
+    <!-- 启动完成后隐藏 Loading -->
+    <script>
+        (function () {
+            var checkReady = setInterval(function () {
+                var app = document.getElementById('app');
+                if (app && app.children.length > 0) {
+                    var loading = document.getElementById('app-loading');
+                    if (loading) {
+                        loading.style.opacity = '0';
+                        loading.style.transition = 'opacity 0.3s ease';
+                        setTimeout(function () { loading.remove(); }, 300);
+                    }
+                    clearInterval(checkReady);
+                }
+            }, 100);
+            // 超时5秒强制隐藏
+            setTimeout(function () {
+                var loading = document.getElementById('app-loading');
+                if (loading) loading.remove();
+                clearInterval(checkReady);
+            }, 5000);
+        })();
+    </script>
+</body>
+</html>
