@@ -114,51 +114,20 @@ function renderSettingsContent(container, stats) {
 
         <!-- 云同步 -->
         <div class="settings-section">
-            <h2 class="settings-section-title">☁️ 多设备实时共享（Supabase）</h2>
+            <h2 class="settings-section-title">☁️ 多设备实时共享（码云 Gitee）</h2>
             <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:12px">
-                免费 PostgreSQL 云数据库，浏览器直连。需注册 Supabase 账号。
+                用你的码云仓库做数据中转，无需额外注册。
             </p>
 
             <div class="settings-action">
                 <div class="settings-action-info">
-                    <div class="settings-action-title">Supabase 注册+创建项目</div>
+                    <div class="settings-action-title">Gitee 个人令牌</div>
                     <div class="settings-action-desc">
-                        <a href="https://supabase.com" target="_blank">supabase.com</a> → 注册 → 新建项目（设密码）→ 等待初始化完成（约2分钟）
+                        <a href="https://gitee.com/profile/personal_access_tokens" target="_blank">点此创建令牌</a> → 勾选「projects」权限 → 生成后粘贴
                     </div>
                 </div>
-            </div>
-
-            <div class="settings-action">
-                <div class="settings-action-info">
-                    <div class="settings-action-title">Project URL</div>
-                    <div class="settings-action-desc">
-                        项目 → Settings → API → Project URL（如 https://xxxxx.supabase.co）
-                    </div>
-                </div>
-                <input type="text" id="cloud-url" class="form-input" style="width:260px"
-                       placeholder="https://xxxxx.supabase.co" value="${getCloudConfig().url}" />
-            </div>
-
-            <div class="settings-action">
-                <div class="settings-action-info">
-                    <div class="settings-action-title">API Key（anon public）</div>
-                    <div class="settings-action-desc">
-                        项目 → Settings → API → Project API keys → anon public
-                    </div>
-                </div>
-                <input type="password" id="cloud-key" class="form-input" style="width:260px"
-                       placeholder="粘贴 anon key" value="${getCloudConfig().key}" />
-            </div>
-
-            <div class="settings-action">
-                <div class="settings-action-info">
-                    <div class="settings-action-title">数据库建表（SQL Editor 里执行）</div>
-                    <div class="settings-action-desc" style="font-family:monospace;font-size:11px">
-                        CREATE TABLE home_storage (id int PRIMARY KEY, items jsonb, updated_at text);
-                        <br/>ALTER TABLE home_storage ENABLE ROW LEVEL SECURITY;
-                        <br/>CREATE POLICY "all" ON home_storage FOR ALL USING (true);
-                    </div>
-                </div>
+                <input type="password" id="cloud-token" class="form-input" style="width:260px"
+                       placeholder="粘贴令牌" value="${getCloudConfig().token}" />
             </div>
 
             <div class="settings-action">
@@ -263,17 +232,14 @@ function bindSettingsEvents() {
         });
     }
 
-    // ---- 云同步 (Supabase) ----
+    // ---- 云同步 (Gitee) ----
     const btnCloudSave   = $('#btn-cloud-save');
     const btnCloudTest   = $('#btn-cloud-test');
     const btnCloudSync   = $('#btn-cloud-sync');
     const cloudStatus    = $('#cloud-status');
 
     function getCloudFields() {
-        return {
-            url:  ($('#cloud-url') || {}).value || '',
-            key:  ($('#cloud-key') || {}).value || ''
-        };
+        return { token: ($('#cloud-token') || {}).value || '' };
     }
 
     function setCloudStatus(msg, ok) {
@@ -284,37 +250,29 @@ function bindSettingsEvents() {
     }
 
     if (btnCloudSave) btnCloudSave.addEventListener('click', () => {
-        const cfg = getCloudFields();
-        if (!cfg.url || !cfg.key) {
-            showToast('请填写 URL 和 Key', 'error'); return;
-        }
-        saveCloudConfig(cfg);
+        const token = getCloudFields().token;
+        if (!token) { showToast('请填写令牌', 'error'); return; }
+        saveCloudConfig({ owner: 'yellowpaulyan', repo: 'home-storage', token });
         setCloudStatus('配置已保存', true);
         showToast('云同步配置已保存', 'success');
     });
 
     if (btnCloudTest) btnCloudTest.addEventListener('click', async () => {
-        const cfg = getCloudFields();
-        if (!cfg.url || !cfg.key) {
-            showToast('请先填写 URL 和 Key', 'error'); return;
-        }
-        saveCloudConfig(cfg);
+        const token = getCloudFields().token;
+        if (!token) { showToast('请先填写令牌', 'error'); return; }
+        saveCloudConfig({ owner: 'yellowpaulyan', repo: 'home-storage', token });
         try {
             setCloudStatus('测试中...', true);
             const result = await cloudTest();
             setCloudStatus(result.message, result.ok);
             showToast(result.message, result.ok ? 'success' : 'error');
-        } catch (e) {
-            setCloudStatus(e.message, false);
-        }
+        } catch (e) { setCloudStatus(e.message, false); }
     });
 
     if (btnCloudSync) btnCloudSync.addEventListener('click', async () => {
-        const cfg = getCloudFields();
-        if (!cfg.url || !cfg.key) {
-            showToast('请先填写 URL 和 Key', 'error'); return;
-        }
-        saveCloudConfig(cfg);
+        const token = getCloudFields().token;
+        if (!token) { showToast('请先填写令牌', 'error'); return; }
+        saveCloudConfig({ owner: 'yellowpaulyan', repo: 'home-storage', token });
         try {
             setCloudStatus('同步中...', true);
             const result = await cloudSync();
