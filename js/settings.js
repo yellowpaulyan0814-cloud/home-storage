@@ -114,26 +114,13 @@ function renderSettingsContent(container, stats) {
 
         <!-- 云同步 -->
         <div class="settings-section">
-            <h2 class="settings-section-title">☁️ 多设备实时共享（码云 GitHub）</h2>
+            <h2 class="settings-section-title">☁️ 多设备实时共享</h2>
             <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:12px">
-                托管+数据都在 GitHub，一个平台全搞定。需 GitHub 账号。
+                全家自动同步，增删改即时生效。无需任何设置。
             </p>
-
             <div class="settings-action">
-                <div class="settings-action-info">
-                    <div class="settings-action-title">GitHub 个人令牌</div>
-                    <div class="settings-action-desc">
-                        <a href="https://github.com/settings/tokens/new?scopes=gist&description=home-storage" target="_blank">点此创建令牌</a> → 勾选「gist」权限 → 生成后粘贴
-                    </div>
-                </div>
-                <input type="password" id="cloud-token" class="form-input" style="width:260px"
-                       placeholder="粘贴 Token (ghp_xxx)" value="${getCloudConfig().token}" />
-            </div>
-
-            <div class="settings-action">
-                <button class="btn btn-primary" id="btn-cloud-save">💾 保存配置</button>
-                <button class="btn btn-secondary" id="btn-cloud-test">🔍 测试连接</button>
-                <button class="btn btn-secondary" id="btn-cloud-sync">🔄 立即同步</button>
+                <button class="btn btn-primary" id="btn-cloud-sync">🔄 立即同步</button>
+                <button class="btn btn-secondary" id="btn-cloud-test">🔍 检查云端</button>
             </div>
             <div id="cloud-status" style="font-size:12px;color:var(--color-text-secondary);margin-top:4px"></div>
         </div>
@@ -232,13 +219,10 @@ function bindSettingsEvents() {
         });
     }
 
-    // ---- 云同步 (GitHub) ----
-    const btnCloudSave   = $('#btn-cloud-save');
-    const btnCloudTest   = $('#btn-cloud-test');
-    const btnCloudSync   = $('#btn-cloud-sync');
-    const cloudStatus    = $('#cloud-status');
-
-    function getCloudFields() { return { token: ($('#cloud-token') || {}).value || '' }; }
+    // ---- 云同步 (GitHub Gist, Token已内置) ----
+    const btnCloudTest = $('#btn-cloud-test');
+    const btnCloudSync = $('#btn-cloud-sync');
+    const cloudStatus  = $('#cloud-status');
 
     function setCloudStatus(msg, ok) {
         if (cloudStatus) {
@@ -247,32 +231,17 @@ function bindSettingsEvents() {
         }
     }
 
-    if (btnCloudSave) btnCloudSave.addEventListener('click', () => {
-        const token = getCloudFields().token;
-        if (!token) { showToast('请填写令牌', 'error'); return; }
-        saveCloudConfig({ token });
-        setCloudStatus('配置已保存', true);
-        showToast('云同步配置已保存', 'success');
-    });
-
     if (btnCloudTest) btnCloudTest.addEventListener('click', async () => {
-        const token = getCloudFields().token;
-        if (!token) { showToast('请先填写令牌', 'error'); return; }
-        saveCloudConfig({ token });
+        setCloudStatus('查询中...', true);
         try {
-            setCloudStatus('测试中...', true);
             const result = await cloudTest();
             setCloudStatus(result.message, result.ok);
-            showToast(result.message, result.ok ? 'success' : 'error');
         } catch (e) { setCloudStatus(e.message, false); }
     });
 
     if (btnCloudSync) btnCloudSync.addEventListener('click', async () => {
-        const token = getCloudFields().token;
-        if (!token) { showToast('请先填写令牌', 'error'); return; }
-        saveCloudConfig({ token });
+        setCloudStatus('同步中...', true);
         try {
-            setCloudStatus('同步中...', true);
             const result = await cloudSync();
             setCloudStatus(result.message, true);
             showToast(result.message, 'success');
