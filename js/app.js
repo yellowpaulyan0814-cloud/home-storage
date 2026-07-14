@@ -18,8 +18,56 @@
  * 4. 启动路由监听
  */
 async function initApp() {
+    // ---- 密码门 ----
+    const FAMILY_PASSWORD = 'yzyz2024'; // 家庭密码，可自行修改
+    const AUTH_KEY = 'hs_auth_passed';
+
+    if (!sessionStorage.getItem(AUTH_KEY)) {
+        // 还没验证过，显示登录界面
+        showLoginGate(FAMILY_PASSWORD, AUTH_KEY, () => startApp());
+        return;
+    }
+
+    await startApp();
+}
+
+function showLoginGate(password, key, onSuccess) {
+    const app = $('#app');
+    app.innerHTML = `
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;text-align:center">
+            <div style="font-size:48px;margin-bottom:16px">🏠</div>
+            <h1 style="font-size:28px;font-weight:700;margin-bottom:8px">闫赵之家</h1>
+            <p style="color:#86868b;margin-bottom:32px">请输入家庭密码</p>
+            <input type="password" id="login-pwd" class="form-input"
+                   style="width:260px;text-align:center;font-size:20px;letter-spacing:8px"
+                   placeholder="****" maxlength="20" autofocus />
+            <div id="login-error" style="color:#ff3b30;font-size:13px;margin-top:12px;display:none">密码错误</div>
+        </div>
+    `;
+
+    setTimeout(() => {
+        const input = $('#login-pwd');
+        const error = $('#login-error');
+        if (input) {
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') {
+                    if (this.value === password) {
+                        sessionStorage.setItem(key, '1');
+                        onSuccess();
+                    } else {
+                        error.style.display = '';
+                        this.value = '';
+                        this.focus();
+                    }
+                }
+            });
+            input.focus();
+        }
+    }, 200);
+}
+
+async function startApp() {
     try {
-        // 初始化数据库
         await openDB();
         console.log('✅ 数据库已就绪');
     } catch (e) {
@@ -28,16 +76,10 @@ async function initApp() {
         return;
     }
 
-    // 渲染导航栏
     renderNavBar();
-
-    // 注册路由
     registerRoutes();
-
-    // 启动路由
     router.start();
 
-    // 从云端拉取最新数据
     setTimeout(() => cloudPullOnStartup(), 1000);
 
     console.log(`🏠 ${APP_NAME} v${APP_VERSION} 已启动`);
