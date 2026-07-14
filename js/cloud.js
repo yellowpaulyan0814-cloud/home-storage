@@ -58,9 +58,11 @@ async function cloudRead() {
     const data = await resp.json();
     // Gitee API 返回 base64 编码的内容
     if (data.content) {
-        const decoded = atob(data.content.replace(/\n/g, ''));
-        const parsed = JSON.parse(decoded);
-        return parsed.items || [];
+        const decoded = decodeURIComponent(escape(atob(data.content.replace(/\n/g, ''))));
+        try {
+            const parsed = JSON.parse(decoded);
+            return parsed.items || [];
+        } catch (e) { return []; }
     }
     return [];
 }
@@ -69,8 +71,9 @@ async function cloudWrite(items) {
     const cfg = getCloudConfig();
     if (!cfg.token) throw new Error('请设置 Gitee 令牌');
 
-    const content = JSON.stringify({ items, updatedAt: nowISO(), version: APP_VERSION }, null, 2);
-    const encoded = btoa(unescape(encodeURIComponent(content)));
+    const content = JSON.stringify({ items, updatedAt: nowISO(), version: APP_VERSION });
+    // Gitee API 要求标准 base64
+    const encoded = btoa(String.fromCharCode(...new TextEncoder().encode(content)));
 
     // 先获取当前文件 sha（更新时需要）
     let sha = '';
