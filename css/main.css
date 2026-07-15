@@ -411,8 +411,10 @@ input[type="search"] {
     background: var(--color-bg);
     border-radius: var(--radius-lg);
     padding: var(--space-lg);
-    max-width: 400px;
+    max-width: 520px;
     width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
     box-shadow: var(--shadow-xl);
     animation: slideUp 0.25s ease;
 }

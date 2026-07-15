@@ -167,8 +167,18 @@ function showMoveModal(item) {
 
         createElement('label', { style: 'font-size:13px;font-weight:500' }, '目标房间'),
         _makeSelect('move-room', getAllRooms().map(r => `<option value="${r.id}">${r.icon} ${r.name}</option>`).join('')),
+
+        // 柜子选择方式
         createElement('label', { style: 'font-size:13px;font-weight:500' }, '目标柜子'),
+        createElement('div', { className: 'mode-toggle', style: 'margin-bottom:8px' }, [
+            createElement('button', { className: 'mode-btn mode-active', id: 'mm-list-btn', onClick: () => { window._moveSetMode('list'); } }, '📋 列表'),
+            createElement('button', { className: 'mode-btn', id: 'mm-map-btn', onClick: () => { window._moveSetMode('map'); } }, '🗄️ 点选'),
+        ]),
         _makeSelect('move-cabinet', '<option value="">请选择</option>'),
+        // 地图容器
+        createElement('div', { id: 'move-mini-map', style: 'display:none;margin-bottom:8px' }, '<div class="mini-map-placeholder">请先选择房间</div>'),
+        createElement('input', { type: 'hidden', id: 'move-cabinet-map', value: '' }),
+
         createElement('label', { style: 'font-size:13px;font-weight:500' }, '目标层'),
         _makeSelect('move-level', '<option value="">请选择</option>'),
 
@@ -178,7 +188,7 @@ function showMoveModal(item) {
                 const mq = parseInt($('#move-qty').value) || 1;
                 const maxQty = item.quantity || 1;
                 const roomId = $('#move-room').value;
-                const cabId  = $('#move-cabinet').value;
+                const cabId  = ($('#move-cabinet-map').value || $('#move-cabinet').value);
                 const level  = $('#move-level').value;
                 if (!cabId || !level) { showToast('请选择目标位置', 'error'); return; }
                 if (mq >= maxQty && maxQty <= 1) {
@@ -195,13 +205,61 @@ function showMoveModal(item) {
         ])
     ]);
 
-    // 级联下拉
+    // 级联下拉 + 地图联动
     setTimeout(() => {
         const roomSel = $('#move-room');
         const cabSel  = $('#move-cabinet');
         const lvlSel  = $('#move-level');
-        roomSel.addEventListener('change', () => { updateCabinetSelect(roomSel.value, cabSel, lvlSel, null); });
-        cabSel.addEventListener('change',  () => { updateLevelSelect(cabSel.value, lvlSel, null); });
+        let moveMapMode = 'list';
+
+        window._moveSetMode = function(mode) {
+            moveMapMode = mode;
+            const lb = $('#mm-list-btn'), mb = $('#mm-map-btn');
+            const cg = $('#move-cabinet'), mg = $('#move-mini-map');
+            if (mode === 'list') { lb.classList.add('mode-active'); mb.classList.remove('mode-active'); cg.style.display=''; mg.style.display='none'; }
+            else { mb.classList.add('mode-active'); lb.classList.remove('mode-active'); cg.style.display='none'; mg.style.display=''; _refreshMoveMap(roomSel.value); }
+        };
+
+        window._onMoveMapClick = function(cabinetId) {
+            const cab = getCabinetById(cabinetId);
+            $('#move-cabinet-map').value = cabinetId;
+            $('#move-cabinet').value = cabinetId;
+            updateLevelSelect(cabinetId, $('#move-level'), null);
+            _refreshMoveMap(roomSel.value);
+        };
+
+        function _refreshMoveMap(roomId) {
+            const container = $('#move-mini-map');
+            if (!container || moveMapMode !== 'map' || !roomId) return;
+            container.innerHTML = '';
+            const layout = getCabinetLayout(roomId);
+            if (!layout || !layout.cabinets.length) { container.innerHTML = '<div class="mini-map-placeholder">该房间暂无柜子</div>'; return; }
+            if (layout.type === 'svg') {
+                let mx=Infinity,my=Infinity,Mx=-Infinity,My=-Infinity;
+                layout.cabinets.forEach(c => { if(c.x<mx)mx=c.x; if(c.y<my)my=c.y; if(c.x+c.w>Mx)Mx=c.x+c.w; if(c.y+c.h>My)My=c.y+c.h; });
+                const p=15, sel = $('#move-cabinet-map').value || $('#move-cabinet').value;
+                container.innerHTML = `<svg viewBox="${mx-p} ${my-p} ${Mx-mx+2*p} ${My-my+2*p}" class="mini-map-svg">
+                    ${layout.cabinets.map(c => {
+                        const cb = getCabinetById(c.id);
+                        const code = cb ? cb.code : c.id;
+                        const name = cb ? cb.name : '';
+                        const isSel = sel === c.id;
+                        return `<g class="mini-cabinet-group ${isSel?'mini-cabinet-selected':''}" onclick="window._onMoveMapClick('${c.id}')">
+                            <rect x="${c.x}" y="${c.y}" width="${c.w}" height="${c.h}" rx="${c.rx||6}" class="mini-cabinet-rect"/>
+                            <text x="${c.x+c.w/2}" y="${c.y+c.h/2+5}" text-anchor="middle" class="mini-cabinet-code">${escapeHtml(code)}</text>
+                        </g>`;
+                    }).join('')}
+                </svg>`;
+            }
+        }
+
+        roomSel.addEventListener('change', () => {
+            const rid = roomSel.value;
+            updateCabinetSelect(rid, cabSel, lvlSel, null);
+            $('#move-cabinet-map').value = '';
+            if (moveMapMode === 'map') _refreshMoveMap(rid);
+        });
+        cabSel.addEventListener('change', () => { updateLevelSelect(cabSel.value, lvlSel, null); if(moveMapMode==='map'){ $('#move-cabinet-map').value=cabSel.value; _refreshMoveMap(roomSel.value); } });
         updateCabinetSelect(roomSel.value, cabSel, lvlSel, null);
     }, 100);
 
