@@ -192,6 +192,17 @@
     fill: var(--color-accent);
 }
 
+/* 已有物品的柜子高亮 */
+.mini-cabinet-existing .mini-cabinet-rect {
+    fill: #fff9eb;
+    stroke: #ff9f0a;
+    stroke-width: 2;
+    stroke-dasharray: 4 2;
+}
+.mini-cabinet-existing .mini-cabinet-code {
+    fill: #e67e00;
+}
+
 .mini-cabinet-name {
     fill: var(--color-text-tertiary);
     font-size: 10px;

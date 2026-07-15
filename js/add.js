@@ -190,17 +190,19 @@ async function renderAddPage(params) {
         if (v < 999) qtyInput.value = v + 1;
     });
 
-    // ---- 物品名称：检测已有记录 ----
+    // ---- 物品名称：实时检测已有记录 ----
+    let existingCabinetIds = []; // 同名物品所在的柜子ID列表
     const nameInput = $('#item-name');
-    nameInput.addEventListener('blur', async () => {
+    const doCheckExisting = debounce(async () => {
         const val = nameInput.value.trim();
         const hint = $('#existing-locations');
-        if (!val || !hint) return;
+        if (!val || !hint) { existingCabinetIds = []; return; }
         const results = await searchItemsFromDB(val);
-        const exact = results.filter(r => r.item.name === val);
-        if (exact.length > 0) {
+        const matched = results.filter(r => r.item.name.includes(val));
+        existingCabinetIds = [...new Set(matched.map(r => r.item.cabinet))];
+        if (matched.length > 0) {
             hint.style.display = '';
-            hint.innerHTML = `📋 已有记录：` + exact.map(r => {
+            hint.innerHTML = `📋 已有：` + matched.map(r => {
                 const rm = getRoomById(r.item.room);
                 const cb = getCabinetById(r.item.cabinet);
                 return `${rm?rm.name:''}·${cb?cb.code:r.item.cabinet}·${r.item.level} ×${r.item.quantity||1}`;
@@ -208,7 +210,9 @@ async function renderAddPage(params) {
         } else {
             hint.style.display = 'none';
         }
-    });
+    }, 200);
+    nameInput.addEventListener('input', doCheckExisting);
+    nameInput.addEventListener('blur', doCheckExisting);
 
     const roomSelect = $('#item-room');
     const cabinetSelect = $('#item-cabinet');
@@ -245,7 +249,7 @@ async function renderAddPage(params) {
                 cabinetMapInput.value = cabinetSelect.value;
             }
             // 刷新地图
-            refreshMiniMap(roomSelect.value, cabinetMapInput.value);
+            refreshMiniMap(roomSelect.value, cabinetMapInput.value, existingCabinetIds);
         }
     }
 
@@ -268,7 +272,7 @@ async function renderAddPage(params) {
         updateLevelSelect(cabinetId, levelSelect, null);
 
         // 刷新地图高亮
-        refreshMiniMap(roomSelect.value, cabinetId);
+        refreshMiniMap(roomSelect.value, cabinetId, existingCabinetIds);
     };
 
     // ---- 房间变更 ----
@@ -279,7 +283,7 @@ async function renderAddPage(params) {
         mapSelectedLabel.textContent = '';
         mapSelectedLabel.className = 'map-selected-label';
         if (currentMode === 'map') {
-            refreshMiniMap(roomId, null);
+            refreshMiniMap(roomId, null, existingCabinetIds);
         }
     });
 
@@ -297,7 +301,7 @@ async function renderAddPage(params) {
                     mapSelectedLabel.className = 'map-selected-label selected';
                 }
             }
-            refreshMiniMap(roomSelect.value, this.value);
+            refreshMiniMap(roomSelect.value, this.value, existingCabinetIds);
         }
     });
 
@@ -352,7 +356,7 @@ async function renderAddPage(params) {
                 $('#item-name').focus();
                 // 地图模式保留高亮
                 if (currentMode === 'map') {
-                    refreshMiniMap(room, cabinet);
+                    refreshMiniMap(room, cabinet, existingCabinetIds);
                 }
             }
         } catch (err) {
@@ -371,9 +375,10 @@ async function renderAddPage(params) {
  * @param {string} roomId - 房间 ID
  * @param {string} [selectedCabinetId] - 当前选中的柜子 ID
  */
-function refreshMiniMap(roomId, selectedCabinetId) {
+function refreshMiniMap(roomId, selectedCabinetId, existingIds) {
     const miniMap = $('#cabinet-mini-map');
     if (!miniMap) return;
+    existingIds = existingIds || [];
 
     if (!roomId) {
         miniMap.innerHTML = '<div class="mini-map-placeholder">请先选择房间</div>';
@@ -410,14 +415,16 @@ function refreshMiniMap(roomId, selectedCabinetId) {
                     const code = cabinet ? cabinet.code : c.id;
                     const name = cabinet ? cabinet.name : '';
                     const isSelected = selectedCabinetId === c.id;
+                    const isExisting = existingIds.includes(c.id);
                     return `
-                        <g class="mini-cabinet-group ${isSelected ? 'mini-cabinet-selected' : ''}"
+                        <g class="mini-cabinet-group ${isSelected ? 'mini-cabinet-selected' : ''} ${isExisting && !isSelected ? 'mini-cabinet-existing' : ''}"
                            data-cabinet="${c.id}"
                            onclick="window._onMiniMapCabinetClick('${c.id}')">
                             <rect x="${c.x}" y="${c.y}" width="${c.w}" height="${c.h}"
-                                  rx="${c.rx || 6}" class="mini-cabinet-rect" />
+                                  rx="${c.rx || 6}" class="mini-cabinet-rect ${isExisting && !isSelected ? 'mini-cabinet-existing' : ''}" />
                             <text x="${c.x + c.w/2}" y="${c.y + c.h/2 + 5}"
                                   text-anchor="middle" class="mini-cabinet-code">${escapeHtml(code)}</text>
+                            ${isExisting && !isSelected ? `<text x="${c.x + c.w/2}" y="${c.y + 12}" text-anchor="middle" style="font-size:9px;fill:#ff9f0a">已有</text>` : ''}
                             ${c.w > 50 && c.h > 35 && name ? `
                                 <text x="${c.x + c.w/2}" y="${c.y + c.h/2 + 20}"
                                       text-anchor="middle" class="mini-cabinet-name">${name.length > 5 ? name.substring(0,5)+'…' : name}</text>
