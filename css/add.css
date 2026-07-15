@@ -22,6 +22,66 @@
 }
 
 /* ============================================================
+   数量输入
+   ============================================================ */
+
+.quantity-input-row {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    width: 160px;
+}
+
+.qty-btn {
+    width: 40px;
+    height: 44px;
+    border: 2px solid var(--color-border-light);
+    background: var(--color-bg-secondary);
+    font-size: 20px;
+    font-weight: 500;
+    color: var(--color-text);
+    cursor: pointer;
+    transition: all var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.qty-btn:first-child {
+    border-radius: var(--radius) 0 0 var(--radius);
+}
+
+.qty-btn:last-child {
+    border-radius: 0 var(--radius) var(--radius) 0;
+}
+
+.qty-btn:hover {
+    background: var(--color-border);
+}
+
+.qty-btn:active {
+    background: #ddd;
+}
+
+.qty-input {
+    width: 80px;
+    height: 44px;
+    text-align: center;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    font-size: 18px;
+    font-weight: 600;
+    -moz-appearance: textfield;
+}
+
+.qty-input::-webkit-outer-spin-button,
+.qty-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+/* ============================================================
    柜子选择模式切换
    ============================================================ */
 

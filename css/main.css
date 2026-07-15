@@ -566,6 +566,38 @@ input[type="search"] {
     margin-bottom: var(--space-lg);
 }
 
+.detail-qty-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 0;
+}
+
+.d-qty-btn {
+    width: 36px;
+    height: 36px;
+    border: 2px solid var(--color-border-light);
+    background: var(--color-bg-secondary);
+    border-radius: 50%;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-accent);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition);
+}
+.d-qty-btn:hover { background: var(--color-accent-light); }
+.d-qty-btn:active { transform: scale(0.92); }
+
+.d-qty-val {
+    font-size: 28px;
+    font-weight: 700;
+    min-width: 40px;
+    text-align: center;
+}
+
 .detail-section-title {
     font-size: var(--text-sm);
     font-weight: 600;

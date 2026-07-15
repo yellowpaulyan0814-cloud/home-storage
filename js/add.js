@@ -66,6 +66,18 @@ async function renderAddPage(params) {
                     />
                 </div>
 
+                <!-- 数量 -->
+                <div class="form-group">
+                    <label class="form-label" for="item-quantity">数量</label>
+                    <div class="quantity-input-row">
+                        <button type="button" class="qty-btn" id="qty-minus">−</button>
+                        <input type="number" id="item-quantity" class="form-input qty-input"
+                               value="${existingItem ? (existingItem.quantity || 1) : 1}"
+                               min="1" max="999" />
+                        <button type="button" class="qty-btn" id="qty-plus">+</button>
+                    </div>
+                </div>
+
                 <!-- 房间选择 -->
                 <div class="form-group">
                     <label class="form-label" for="item-room">
@@ -164,6 +176,17 @@ async function renderAddPage(params) {
     // ============================================================
     // 绑定事件
     // ============================================================
+
+    // ---- 数量按钮 ----
+    const qtyInput = $('#item-quantity');
+    $('#qty-minus').addEventListener('click', () => {
+        const v = parseInt(qtyInput.value) || 1;
+        if (v > 1) qtyInput.value = v - 1;
+    });
+    $('#qty-plus').addEventListener('click', () => {
+        const v = parseInt(qtyInput.value) || 1;
+        if (v < 999) qtyInput.value = v + 1;
+    });
 
     const roomSelect = $('#item-room');
     const cabinetSelect = $('#item-cabinet');
@@ -282,6 +305,7 @@ async function renderAddPage(params) {
         // 根据当前模式取柜子值
         const cabinet = currentMode === 'map' ? cabinetMapInput.value : cabinetSelect.value;
         const level = levelSelect.value;
+        const quantity = parseInt($('#item-quantity').value) || 1;
         const box = $('#item-box').value.trim();
         const remark = $('#item-remark').value.trim();
 
@@ -292,11 +316,11 @@ async function renderAddPage(params) {
 
         try {
             if (isEdit) {
-                await updateItem(existingItem.id, { name, room, cabinet, level, box, remark });
+                await updateItem(existingItem.id, { name, room, cabinet, level, quantity, box, remark });
                 showToast('物品已更新', 'success');
                 history.back();
             } else {
-                await addItem({ name, room, cabinet, level, box, remark });
+                await addItem({ name, room, cabinet, level, quantity, box, remark });
                 showToast('物品已添加', 'success');
                 // 清空名称和可选字段，保留房间和柜子方便连续录入
                 $('#item-name').value = '';

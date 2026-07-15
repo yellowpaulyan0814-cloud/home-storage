@@ -81,7 +81,7 @@ function getStore(db, mode) {
 
 /**
  * 新增物品
- * @param {object} data - { name, room, cabinet, level, box?, remark? }
+ * @param {object} data - { name, room, cabinet, level, quantity?, box?, remark? }
  * @returns {Promise<object>} 完整的物品对象（含自动生成的字段）
  */
 async function addItem(data) {
@@ -94,6 +94,7 @@ async function addItem(data) {
         room: data.room,
         cabinet: data.cabinet,
         level: data.level,
+        quantity: Math.max(1, parseInt(data.quantity) || 1),
         box: (data.box || '').trim(),
         remark: (data.remark || '').trim(),
         createTime: now,
@@ -159,6 +160,7 @@ async function updateItem(id, data) {
         room: data.room !== undefined ? data.room : existing.room,
         cabinet: data.cabinet !== undefined ? data.cabinet : existing.cabinet,
         level: data.level !== undefined ? data.level : existing.level,
+        quantity: data.quantity !== undefined ? Math.max(1, parseInt(data.quantity) || 1) : (existing.quantity || 1),
         box: data.box !== undefined ? data.box.trim() : existing.box,
         remark: data.remark !== undefined ? data.remark.trim() : existing.remark,
         updateTime: nowISO()
@@ -181,27 +183,71 @@ async function updateItem(id, data) {
 }
 
 /**
- * 删除物品
+ * 删除物品（或减少数量）
  * @param {string} id
- * @returns {Promise<void>}
+ * @param {number} [deleteQty] 要删除的数量，不传则全部删除
+ * @returns {Promise<object>} { deleted: true } 或 { remaining: N }
  */
-async function deleteItem(id) {
-    const db = await openDB();
+async function deleteItem(id, deleteQty) {
+    const existing = await getItem(id);
+    if (!existing) throw new Error('物品不存在: ' + id);
 
-    return new Promise((resolve, reject) => {
-        const store = getStore(db, 'readwrite');
-        const request = store.delete(id);
+    const currentQty = existing.quantity || 1;
+    const dq = deleteQty || currentQty;
 
-        request.onsuccess = function () {
-            resolve();
-            setTimeout(() => cloudPushAfterChange(), 0);
-        };
+    if (dq >= currentQty) {
+        // 全部删除
+        const db = await openDB();
+        return new Promise((resolve, reject) => {
+            const store = getStore(db, 'readwrite');
+            const request = store.delete(id);
+            request.onsuccess = () => { resolve({ deleted: true }); setTimeout(() => cloudPushAfterChange(), 0); };
+            request.onerror = (e) => reject(e.target.error);
+        });
+    } else {
+        // 部分删除，减少数量
+        await updateItem(id, { quantity: currentQty - dq });
+        return { remaining: currentQty - dq };
+    }
+}
 
-        request.onerror = function (event) {
-            console.error('删除物品失败:', event.target.error);
-            reject(event.target.error);
-        };
-    });
+/**
+ * 移动物品到另一个柜子
+ * @param {string} id - 原物品ID
+ * @param {string} targetRoom - 目标房间
+ * @param {string} targetCabinet - 目标柜子
+ * @param {string} targetLevel - 目标层
+ * @param {number} [moveQty] - 移动数量，不传则全部移动
+ * @returns {Promise<object>} 新物品（如果是部分移动）或更新后的原物品
+ */
+async function moveItem(id, targetRoom, targetCabinet, targetLevel, moveQty) {
+    const existing = await getItem(id);
+    if (!existing) throw new Error('物品不存在: ' + id);
+
+    const currentQty = existing.quantity || 1;
+    const mq = Math.min(moveQty || currentQty, currentQty);
+
+    if (mq >= currentQty) {
+        // 全部移动：直接更新原物品位置
+        return await updateItem(id, {
+            room: targetRoom,
+            cabinet: targetCabinet,
+            level: targetLevel
+        });
+    } else {
+        // 部分移动：原物品减数量，创建新物品
+        await updateItem(id, { quantity: currentQty - mq });
+        const newItem = await addItem({
+            name: existing.name,
+            room: targetRoom,
+            cabinet: targetCabinet,
+            level: targetLevel,
+            quantity: mq,
+            box: existing.box,
+            remark: existing.remark
+        });
+        return newItem;
+    }
 }
 
 // ============================================================
@@ -382,10 +428,11 @@ async function importData(jsonStr) {
             continue;
         }
 
-        // 确保时间字段存在
+        // 确保时间字段和数量字段存在
         const now = nowISO();
         const newItem = {
             ...item,
+            quantity: item.quantity || 1,
             createTime: item.createTime || now,
             updateTime: item.updateTime || now
         };

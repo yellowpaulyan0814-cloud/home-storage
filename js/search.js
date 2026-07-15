@@ -105,7 +105,7 @@ async function renderSearchPage(params) {
                     <div class="search-result-item"
                          data-id="${item.id}"
                          onclick="showItemDetail('${item.id}')">
-                        <div class="result-name">${highlightMatch(item.name, searchInput.value)}</div>
+                        <div class="result-name">${highlightMatch(item.name, searchInput.value)}${(item.quantity || 1) > 1 ? ` <span style="color:#999;font-size:13px">×${item.quantity}</span>` : ''}</div>
                         <div class="result-location">
                             <span class="result-room">${escapeHtml(roomName)}</span>
                             <span class="result-arrow">→</span>
