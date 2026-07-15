@@ -21,7 +21,7 @@ async function renderSearchPage(params) {
     app.innerHTML = `
         <div class="page search-page">
             <div class="search-hero">
-                <div class="home-title">🏠 闫赵之家</div>
+                <div class="home-title">🏠 我的家</div>
                 <h1 class="search-title">🔍 查找物品</h1>
                 <p class="search-subtitle">输入物品名称，立即找到它在哪个柜子里</p>
                 <div class="search-input-wrapper">

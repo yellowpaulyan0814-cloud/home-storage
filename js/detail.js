@@ -166,14 +166,11 @@ function showMoveModal(item) {
         ]),
 
         createElement('label', { style: 'font-size:13px;font-weight:500' }, '目标房间'),
-        createElement('select', { id: 'move-room', className: 'form-select', style: 'margin-bottom:8px' },
-            getAllRooms().map(r => `<option value="${r.id}">${r.icon} ${r.name}</option>`).join('')),
-
+        _makeSelect('move-room', getAllRooms().map(r => `<option value="${r.id}">${r.icon} ${r.name}</option>`).join('')),
         createElement('label', { style: 'font-size:13px;font-weight:500' }, '目标柜子'),
-        createElement('select', { id: 'move-cabinet', className: 'form-select', style: 'margin-bottom:8px' }, '<option value="">请选择</option>'),
-
+        _makeSelect('move-cabinet', '<option value="">请选择</option>'),
         createElement('label', { style: 'font-size:13px;font-weight:500' }, '目标层'),
-        createElement('select', { id: 'move-level', className: 'form-select', style: 'margin-bottom:16px' }, '<option value="">请选择</option>'),
+        _makeSelect('move-level', '<option value="">请选择</option>'),
 
         createElement('div', { className: 'dialog-footer' }, [
             createElement('button', { className: 'btn btn-secondary', onClick: () => overlay.remove() }, '取消'),
@@ -238,6 +235,12 @@ async function promptQuantity(title, max, msg) {
         overlay.appendChild(dialog);
         document.body.appendChild(overlay);
     });
+}
+
+function _makeSelect(id, optionsHtml) {
+    const el = createElement('select', { id, className: 'form-select', style: 'margin-bottom:8px' });
+    el.innerHTML = optionsHtml;
+    return el;
 }
 
 function refreshAfterChange() {

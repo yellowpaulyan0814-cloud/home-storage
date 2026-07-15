@@ -36,7 +36,7 @@ function showLoginGate(password, key, onSuccess) {
     app.innerHTML = `
         <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;text-align:center">
             <div style="font-size:48px;margin-bottom:16px">🏠</div>
-            <h1 style="font-size:28px;font-weight:700;margin-bottom:8px">闫赵之家</h1>
+            <h1 style="font-size:28px;font-weight:700;margin-bottom:8px">我的家</h1>
             <p style="color:#86868b;margin-bottom:32px">请输入家庭密码</p>
             <input type="password" id="login-pwd" class="form-input"
                    style="width:260px;text-align:center;font-size:20px;letter-spacing:8px"

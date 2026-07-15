@@ -20,15 +20,16 @@
 }
 
 .home-title {
-    font-size: 32px;
-    font-weight: 700;
-    background: linear-gradient(135deg, #333, #666);
+    font-size: 42px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #2c3e50, #3498db, #2ecc71);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
     margin-bottom: var(--space);
-    letter-spacing: 6px;
+    letter-spacing: 8px;
     text-shadow: none;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1));
 }
 
 /* 有搜索结果时缩小顶部区域 */
