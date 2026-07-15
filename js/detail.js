@@ -151,7 +151,8 @@ function showMoveModal(item) {
         ]),
 
         createElement('label', { style: 'font-size:13px;font-weight:500' }, '目标房间'),
-        _makeSelect('move-room', getAllRooms().map(r => `<option value="${r.id}">${r.icon} ${r.name}</option>`).join('')),
+        _makeSelect('move-room',
+            getAllRooms().map(r => `<option value="${r.id}" ${r.id===item.room?'selected':''}>${r.icon} ${r.name}</option>`).join('')),
 
         // 柜子选择方式
         createElement('label', { style: 'font-size:13px;font-weight:500' }, '目标柜子'),
@@ -176,8 +177,11 @@ function showMoveModal(item) {
                 const cabId  = ($('#move-cabinet-map').value || $('#move-cabinet').value);
                 const level  = $('#move-level').value;
                 if (!cabId || !level) { showToast('请选择目标位置', 'error'); return; }
-                if (mq >= maxQty && maxQty <= 1) {
-                    const ok = await confirmDialog(`"${item.name}" 只有1个，移动后将清空原位置。确认？`, '移动确认');
+                if (mq >= maxQty) {
+                    const warn = maxQty <= 1
+                        ? `"${item.name}" 只有1个，移动后将清空原位置。确认？`
+                        : `将移动全部 ${mq} 个"${item.name}"，原位置将清空。确认？`;
+                    const ok = await confirmDialog(warn, '移动确认');
                     if (!ok) return;
                 }
                 try {

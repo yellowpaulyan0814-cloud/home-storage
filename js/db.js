@@ -227,26 +227,39 @@ async function moveItem(id, targetRoom, targetCabinet, targetLevel, moveQty) {
     const currentQty = existing.quantity || 1;
     const mq = Math.min(moveQty || currentQty, currentQty);
 
+    // 检查目标位置是否已有同名物品
+    const allItems = await getAllItems();
+    const sameItem = allItems.find(it =>
+        it.id !== id &&
+        it.name === existing.name &&
+        it.room === targetRoom &&
+        it.cabinet === targetCabinet &&
+        it.level === targetLevel
+    );
+
     if (mq >= currentQty) {
-        // 全部移动：直接更新原物品位置
-        return await updateItem(id, {
-            room: targetRoom,
-            cabinet: targetCabinet,
-            level: targetLevel
-        });
+        // 全部移动
+        if (sameItem) {
+            // 合并到已有物品
+            await updateItem(sameItem.id, { quantity: (sameItem.quantity || 1) + mq });
+            await deleteItem(id);
+            return sameItem;
+        } else {
+            return await updateItem(id, { room: targetRoom, cabinet: targetCabinet, level: targetLevel });
+        }
     } else {
-        // 部分移动：原物品减数量，创建新物品
+        // 部分移动
         await updateItem(id, { quantity: currentQty - mq });
-        const newItem = await addItem({
-            name: existing.name,
-            room: targetRoom,
-            cabinet: targetCabinet,
-            level: targetLevel,
-            quantity: mq,
-            box: existing.box,
-            remark: existing.remark
-        });
-        return newItem;
+        if (sameItem) {
+            // 合并到已有物品
+            await updateItem(sameItem.id, { quantity: (sameItem.quantity || 1) + mq });
+            return sameItem;
+        } else {
+            return await addItem({
+                name: existing.name, room: targetRoom, cabinet: targetCabinet, level: targetLevel,
+                quantity: mq, box: existing.box, remark: existing.remark
+            });
+        }
     }
 }
 
