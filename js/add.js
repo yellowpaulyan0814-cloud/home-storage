@@ -205,8 +205,8 @@ async function renderAddPage(params) {
             hint.innerHTML = `📋 已有：` + matched.map(r => {
                 const rm = getRoomById(r.item.room);
                 const cb = getCabinetById(r.item.cabinet);
-                return `${rm?rm.name:''}·${cb?cb.code:r.item.cabinet}·${r.item.level} ×${r.item.quantity||1}`;
-            }).join('，');
+                return `<strong>${escapeHtml(r.item.name)}</strong> 在 ${rm?rm.name:''}·${cb?cb.code:r.item.cabinet}·${r.item.level} ×${r.item.quantity||1}`;
+            }).join('；');
         } else {
             hint.style.display = 'none';
         }
