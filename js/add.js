@@ -64,6 +64,7 @@ async function renderAddPage(params) {
                         required
                         autofocus
                     />
+                    <div id="existing-locations" style="font-size:12px;color:#999;margin-top:4px;display:none"></div>
                 </div>
 
                 <!-- 数量 -->
@@ -187,6 +188,26 @@ async function renderAddPage(params) {
     $('#qty-plus').addEventListener('click', () => {
         const v = parseInt(qtyInput.value) || 1;
         if (v < 999) qtyInput.value = v + 1;
+    });
+
+    // ---- 物品名称：检测已有记录 ----
+    const nameInput = $('#item-name');
+    nameInput.addEventListener('blur', async () => {
+        const val = nameInput.value.trim();
+        const hint = $('#existing-locations');
+        if (!val || !hint) return;
+        const results = await searchItemsFromDB(val);
+        const exact = results.filter(r => r.item.name === val);
+        if (exact.length > 0) {
+            hint.style.display = '';
+            hint.innerHTML = `📋 已有记录：` + exact.map(r => {
+                const rm = getRoomById(r.item.room);
+                const cb = getCabinetById(r.item.cabinet);
+                return `${rm?rm.name:''}·${cb?cb.code:r.item.cabinet}·${r.item.level} ×${r.item.quantity||1}`;
+            }).join('，');
+        } else {
+            hint.style.display = 'none';
+        }
     });
 
     const roomSelect = $('#item-room');

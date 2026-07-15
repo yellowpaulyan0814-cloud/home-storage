@@ -87,10 +87,22 @@ function getStore(db, mode) {
 async function addItem(data) {
     const db = await openDB();
     const now = nowISO();
+    const name = data.name.trim();
+
+    // 检查同一柜子同一层是否已有同名物品
+    const existingItems = await getItemsByCabinetLevel(data.cabinet, data.level);
+    const sameItem = existingItems.find(it => it.name === name);
+
+    if (sameItem) {
+        // 合并数量
+        const addQty = Math.max(1, parseInt(data.quantity) || 1);
+        const updated = await updateItem(sameItem.id, { quantity: (sameItem.quantity || 1) + addQty });
+        return updated;
+    }
 
     const item = {
         id: generateId(),
-        name: data.name.trim(),
+        name: name,
         room: data.room,
         cabinet: data.cabinet,
         level: data.level,
