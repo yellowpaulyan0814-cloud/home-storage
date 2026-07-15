@@ -82,8 +82,9 @@ async function renderAddPage(params) {
                 <div class="form-group">
                     <label class="form-label" for="item-room">
                         房间 <span class="required">*</span>
+                        ${isEdit ? '<span style="font-size:11px;color:#999">（只读，移动请用📦移动功能）</span>' : ''}
                     </label>
-                    <select id="item-room" class="form-select" required>
+                    <select id="item-room" class="form-select" required ${isEdit ? 'disabled' : ''}>
                         <option value="">请选择房间</option>
                         ${rooms.map(r => `
                             <option value="${r.id}" ${selectedRoom === r.id ? 'selected' : ''}>
@@ -93,8 +94,8 @@ async function renderAddPage(params) {
                     </select>
                 </div>
 
-                <!-- 柜子选择方式切换 -->
-                <div class="form-group" id="cabinet-mode-group">
+                <!-- 柜子选择方式切换（编辑模式不显示） -->
+                <div class="form-group" id="cabinet-mode-group" ${isEdit ? 'style="display:none"' : ''}>
                     <label class="form-label">柜子选择方式</label>
                     <div class="mode-toggle">
                         <button type="button" class="mode-btn mode-active" data-mode="list" id="mode-list-btn">
@@ -111,7 +112,7 @@ async function renderAddPage(params) {
                     <label class="form-label" for="item-cabinet">
                         柜子 <span class="required">*</span>
                     </label>
-                    <select id="item-cabinet" class="form-select" required>
+                    <select id="item-cabinet" class="form-select" required ${isEdit ? 'disabled' : ''}>
                         <option value="">请先选择房间</option>
                     </select>
                 </div>
@@ -134,7 +135,7 @@ async function renderAddPage(params) {
                     <label class="form-label" for="item-level">
                         层数 <span class="required">*</span>
                     </label>
-                    <select id="item-level" class="form-select" required>
+                    <select id="item-level" class="form-select" required ${isEdit ? 'disabled' : ''}>
                         <option value="">请先选择柜子</option>
                     </select>
                 </div>
@@ -316,7 +317,8 @@ async function renderAddPage(params) {
 
         try {
             if (isEdit) {
-                await updateItem(existingItem.id, { name, room, cabinet, level, quantity, box, remark });
+                // 编辑模式：只更新名称、数量、收纳盒、备注，位置不变
+                await updateItem(existingItem.id, { name, quantity, box, remark });
                 showToast('物品已更新', 'success');
                 history.back();
             } else {
