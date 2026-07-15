@@ -491,7 +491,7 @@ async function renderCabinetDetail(container, roomId, cabinetId, levelId, highli
                                              onclick="showItemDetail('${item.id}')">
                                             <div class="level-item-icon">📦</div>
                                             <div class="level-item-info">
-                                                <div class="level-item-name">${escapeHtml(item.name)}</div>
+                                                <div class="level-item-name">${escapeHtml(item.name)}${(item.quantity||1)>1?` <span style="color:#999;font-size:12px">×${item.quantity}</span>`:''}</div>
                                                 <div class="level-item-meta">
                                                     ${item.box ? `<span>📦 ${escapeHtml(item.box)}</span>` : ''}
                                                     <span>${formatDateTime(item.updateTime)}</span>

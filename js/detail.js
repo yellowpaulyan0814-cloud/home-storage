@@ -36,14 +36,10 @@ function buildPanel(item, room, cabinet, roomName, cabinetName, qty) {
             createElement('button', { className: 'detail-close', onClick: () => overlay.remove() }, '✕')
         ]),
 
-        // ---- 数量区域 ----
+        // ---- 数量（只读显示） ----
         createElement('div', { className: 'detail-section' }, [
             createElement('h3', { className: 'detail-section-title' }, '🔢 数量'),
-            createElement('div', { className: 'detail-qty-row' }, [
-                createElement('button', { className: 'd-qty-btn', id: 'detail-qty-minus', onClick: () => changeQty(-1) }, '−'),
-                createElement('span', { className: 'd-qty-val', id: 'detail-qty-val' }, String(qty)),
-                createElement('button', { className: 'd-qty-btn', id: 'detail-qty-plus',  onClick: () => changeQty(1) }, '+'),
-            ])
+            createElement('span', { style: 'font-size:24px;font-weight:700' }, String(qty)),
         ]),
 
         // ---- 位置信息 ----
@@ -98,18 +94,18 @@ function buildPanel(item, room, cabinet, roomName, cabinetName, qty) {
             }, '✏️ 编辑'),
             createElement('button', { className: 'btn btn-danger btn-detail-action',
                 onClick: async () => {
-                    const currentQty = parseInt($('#detail-qty-val') ? $('#detail-qty-val').textContent : qty);
-                    if (currentQty <= 1) {
+                    const cq = item.quantity || 1;
+                    if (cq <= 1) {
                         const ok = await confirmDialog(`确定要删除"${item.name}"吗？数量为1，将全部删除。`, '删除物品');
                         if (!ok) return;
                         await deleteItem(item.id);
                         overlay.remove();
                         showToast(`已删除"${item.name}"`, 'success');
                     } else {
-                        const delQty = await promptQuantity('删除数量', currentQty, `要删除多少个"${item.name}"？（当前共 ${currentQty} 个）`);
+                        const delQty = await promptQuantity('删除数量', cq, `要删除多少个"${item.name}"？（当前共 ${cq} 个）`);
                         if (!delQty) return;
-                        if (delQty >= currentQty) {
-                            const ok = await confirmDialog(`将删除全部 ${currentQty} 个"${item.name}"，确认？`, '全部删除');
+                        if (delQty >= cq) {
+                            const ok = await confirmDialog(`将删除全部 ${cq} 个"${item.name}"，确认？`, '全部删除');
                             if (!ok) return;
                             await deleteItem(item.id);
                             overlay.remove();
@@ -117,7 +113,7 @@ function buildPanel(item, room, cabinet, roomName, cabinetName, qty) {
                         } else {
                             await deleteItem(item.id, delQty);
                             overlay.remove();
-                            showToast(`"${item.name}" 已减少 ${delQty} 个（剩余 ${currentQty - delQty}）`, 'success');
+                            showToast(`"${item.name}" 已减少 ${delQty} 个（剩余 ${cq - delQty}）`, 'success');
                         }
                     }
                     refreshAfterChange();
@@ -125,17 +121,6 @@ function buildPanel(item, room, cabinet, roomName, cabinetName, qty) {
             }, '🗑️ 删除')
         ])
     ]);
-
-    // 数量修改函数（闭包）
-    let currentQty = qty;
-    window.changeQty = async function (delta) {
-        currentQty = Math.max(1, currentQty + delta);
-        const valEl = $('#detail-qty-val');
-        if (valEl) valEl.textContent = currentQty;
-        try {
-            await updateItem(item.id, { quantity: currentQty });
-        } catch (e) { showToast('更新失败', 'error'); }
-    };
 
     overlay.appendChild(panel);
     document.body.appendChild(overlay);
