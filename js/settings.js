@@ -94,22 +94,23 @@ function renderSettingsContent(container, stats) {
             <div class="settings-action">
                 <div class="settings-action-info">
                     <div class="settings-action-title">导出数据</div>
-                    <div class="settings-action-desc">将所有物品数据导出为 JSON 文件，用于备份或迁移</div>
+                    <div class="settings-action-desc">导出为 JSON（完整备份）或 CSV（Excel 可编辑）</div>
                 </div>
-                <button class="btn btn-primary" id="btn-export">
-                    📥 导出 JSON
-                </button>
+                <div style="display:flex;gap:8px">
+                    <button class="btn btn-primary" id="btn-export-json">📥 JSON</button>
+                    <button class="btn btn-secondary" id="btn-export-csv">📊 CSV</button>
+                </div>
             </div>
 
             <div class="settings-action">
                 <div class="settings-action-info">
                     <div class="settings-action-title">导入数据</div>
-                    <div class="settings-action-desc">从之前导出的 JSON 文件导入物品数据（不覆盖已有数据）</div>
+                    <div class="settings-action-desc">支持 JSON 或 CSV 文件（CSV 表头：物品名称,数量,房间,柜子编号,柜子名称,层数,收纳盒,备注）</div>
                 </div>
                 <button class="btn btn-secondary" id="btn-import">
-                    📤 导入 JSON
+                    📤 导入文件
                 </button>
-                <input type="file" id="import-file-input" accept=".json" style="display:none" />
+                <input type="file" id="import-file-input" accept=".json,.csv" style="display:none" />
             </div>
 
         <!-- 云同步 -->
@@ -168,53 +169,45 @@ function renderSettingsContent(container, stats) {
  * 绑定设置页面事件
  */
 function bindSettingsEvents() {
-    // 导出
-    const btnExport = $('#btn-export');
-    if (btnExport) {
-        btnExport.addEventListener('click', async function () {
-            try {
-                const json = await exportData();
-                const now = new Date();
-                const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
-                downloadFile(json, `家庭收纳备份-${dateStr}.json`, 'application/json');
-                showToast('导出成功', 'success');
-            } catch (e) {
-                console.error('导出失败:', e);
-                showToast('导出失败，请重试', 'error');
-            }
-        });
-    }
+    // 导出 JSON
+    const btnExportJSON = $('#btn-export-json');
+    if (btnExportJSON) btnExportJSON.addEventListener('click', async () => {
+        try {
+            const json = await exportData();
+            const ds = new Date().toISOString().slice(0,10).replace(/-/g,'');
+            downloadFile(json, `家庭收纳备份-${ds}.json`, 'application/json');
+            showToast('JSON 导出成功', 'success');
+        } catch (e) { showToast('导出失败', 'error'); }
+    });
 
-    // 导入按钮 → 触发文件选择
+    // 导出 CSV
+    const btnExportCSV = $('#btn-export-csv');
+    if (btnExportCSV) btnExportCSV.addEventListener('click', async () => {
+        try {
+            const csv = await exportCSV();
+            const ds = new Date().toISOString().slice(0,10).replace(/-/g,'');
+            // BOM for Excel UTF-8 recognition
+            const bom = '﻿';
+            downloadFile(bom + csv, `家庭收纳物品-${ds}.csv`, 'text/csv;charset=utf-8');
+            showToast('CSV 导出成功（可用 Excel 编辑后导入）', 'success');
+        } catch (e) { showToast('导出失败', 'error'); }
+    });
+
+    // 导入
     const btnImport = $('#btn-import');
     const fileInput = $('#import-file-input');
     if (btnImport && fileInput) {
-        btnImport.addEventListener('click', function () {
-            fileInput.click();
-        });
-
+        btnImport.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', async function () {
             const file = this.files[0];
             if (!file) return;
-
             try {
                 const content = await readFileAsText(file);
-                const result = await importData(content);
-                showToast(
-                    `导入完成：新增 ${result.added} 件，跳过 ${result.skipped} 件（已存在），共 ${result.total} 件`,
-                    'success',
-                    4000
-                );
-                // 刷新统计
+                const result = await importData(content, file.name);
+                showToast(`导入完成：新增 ${result.added} 件，跳过 ${result.skipped} 件`, 'success', 4000);
                 const stats = await getStats();
-                const container = $('#settings-content');
-                renderSettingsContent(container, stats);
-            } catch (e) {
-                console.error('导入失败:', e);
-                showToast('导入失败：' + e.message, 'error', 4000);
-            }
-
-            // 清空文件选择（允许重复导入同一文件）
+                renderSettingsContent($('#settings-content'), stats);
+            } catch (e) { showToast('导入失败：' + e.message, 'error', 4000); }
             fileInput.value = '';
         });
     }

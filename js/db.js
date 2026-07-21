@@ -418,61 +418,150 @@ async function exportData() {
 }
 
 /**
- * 导入数据
- * 注意：不会覆盖已有数据，只追加新数据（根据 ID 判断）
- *
- * @param {string} jsonStr - JSON 字符串
- * @returns {Promise<object>} { added: number, skipped: number, total: number }
+ * 导出所有数据为 CSV 字符串（Excel 可编辑）
+ * 列：物品名称,数量,房间,柜子编号,柜子名称,层数,收纳盒,备注,创建时间,修改时间
+ * @returns {Promise<string>}
  */
-async function importData(jsonStr) {
+async function exportCSV() {
+    const items = await getAllItems();
+    const header = '物品名称,数量,房间,柜子编号,柜子名称,层数,收纳盒,备注,创建时间,修改时间';
+    const rows = items.map(item => {
+        const room = getRoomById(item.room);
+        const cabinet = getCabinetById(item.cabinet);
+        return csvRow([
+            item.name,
+            item.quantity || 1,
+            room ? room.name : item.room,
+            cabinet ? cabinet.code : item.cabinet,
+            cabinet ? cabinet.name : '',
+            item.level,
+            item.box || '',
+            item.remark || '',
+            item.createTime || '',
+            item.updateTime || ''
+        ]);
+    });
+    return [header, ...rows].join('\n');
+}
+
+function csvRow(fields) {
+    return fields.map(f => {
+        const s = String(f);
+        if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+            return '"' + s.replace(/"/g, '""') + '"';
+        }
+        return s;
+    }).join(',');
+}
+
+/**
+ * 导入数据（自动检测 JSON 或 CSV）
+ * @param {string} content - 文件内容
+ * @param {string} filename - 文件名（用于检测格式）
+ * @returns {Promise<object>} { added, skipped, total }
+ */
+async function importData(content, filename) {
+    const isCSV = (filename && filename.endsWith('.csv')) || content.trim().startsWith('物品名称');
+    if (isCSV) return _importCSV(content);
+
+    // JSON 格式
     let data;
-    try {
-        data = JSON.parse(jsonStr);
-    } catch (e) {
-        throw new Error('JSON 格式无效，请检查文件内容');
-    }
+    try { data = JSON.parse(content); }
+    catch (e) { throw new Error('JSON 格式无效'); }
+    if (!data.items || !Array.isArray(data.items)) throw new Error('缺少 items 数组');
 
-    if (!data.items || !Array.isArray(data.items)) {
-        throw new Error('数据格式不正确：缺少 items 数组');
-    }
+    return _importItems(data.items);
+}
 
-    const db = await openDB();
-    let added = 0;
-    let skipped = 0;
+function _parseCSV(text) {
+    const lines = text.trim().split('\n');
+    if (lines.length < 2) throw new Error('CSV 至少需要表头和数据行');
 
-    for (const item of data.items) {
-        if (!item.id || !item.name || !item.room || !item.cabinet) {
-            skipped++;
-            continue;
+    const parseLine = (line) => {
+        const result = [];
+        let current = '', inQuotes = false;
+        for (let i = 0; i < line.length; i++) {
+            const ch = line[i];
+            if (inQuotes) {
+                if (ch === '"') {
+                    if (i + 1 < line.length && line[i + 1] === '"') { current += '"'; i++; }
+                    else inQuotes = false;
+                } else current += ch;
+            } else {
+                if (ch === '"') inQuotes = true;
+                else if (ch === ',') { result.push(current); current = ''; }
+                else current += ch;
+            }
         }
+        result.push(current);
+        return result;
+    };
 
-        // 检查是否已存在
-        const existing = await getItem(item.id);
-        if (existing) {
-            skipped++;
-            continue;
-        }
+    const header = parseLine(lines[0]);
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+        const vals = parseLine(lines[i]);
+        if (vals.length < 3) continue;
+        const obj = {};
+        header.forEach((h, idx) => { if (vals[idx] !== undefined) obj[h.trim()] = vals[idx]; });
+        rows.push(obj);
+    }
+    return rows;
+}
 
-        // 确保时间字段和数量字段存在
-        const now = nowISO();
-        const newItem = {
-            ...item,
-            quantity: item.quantity || 1,
-            createTime: item.createTime || now,
-            updateTime: item.updateTime || now
-        };
+async function _importCSV(text) {
+    const rows = _parseCSV(text);
+    const now = nowISO();
+    const items = [];
 
-        await new Promise((resolve, reject) => {
-            const store = getStore(db, 'readwrite');
-            const request = store.put(newItem);
-            request.onsuccess = () => resolve();
-            request.onerror = (e) => reject(e.target.error);
+    for (const row of rows) {
+        const name = (row['物品名称'] || '').trim();
+        const quantity = parseInt(row['数量']) || 1;
+        const roomName = (row['房间'] || '').trim();
+        const cabinetCode = (row['柜子编号'] || '').trim();
+        const level = (row['层数'] || '').trim();
+        const box = (row['收纳盒'] || '').trim();
+        const remark = (row['备注'] || '').trim();
+
+        if (!name || !roomName || !cabinetCode || !level) continue;
+
+        // 根据中文房间名查找房间ID
+        const room = Object.values(ROOMS).find(r => r.name === roomName);
+        if (!room) continue;
+
+        // 根据柜子编号查找柜子ID
+        const cabinet = Object.values(CABINETS).find(c => c.code === cabinetCode && c.room === room.id);
+        if (!cabinet) continue;
+
+        items.push({
+            id: generateId(),
+            name, quantity, room: room.id, cabinet: cabinet.id, level,
+            box, remark, createTime: now, updateTime: now
         });
+    }
 
+    return _importItems(items);
+}
+
+async function _importItems(items) {
+    let added = 0, skipped = 0;
+    for (const item of items) {
+        if (!item.name || !item.room || !item.cabinet) { skipped++; continue; }
+        const existing = await getItem(item.id);
+        if (existing) { skipped++; continue; }
+        const now = nowISO();
+        await new Promise((resolve, reject) => {
+            openDB().then(db => {
+                const store = db.transaction(['items'], 'readwrite').objectStore('items');
+                store.put({ ...item, quantity: item.quantity || 1, createTime: item.createTime || now, updateTime: item.updateTime || now });
+                const tx = store.transaction;
+                tx.oncomplete = () => resolve();
+                tx.onerror = (e) => reject(e.target.error);
+            });
+        });
         added++;
     }
-
-    return { added, skipped, total: data.items.length };
+    return { added, skipped, total: items.length };
 }
 
 // ============================================================
