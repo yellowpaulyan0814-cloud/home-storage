@@ -429,19 +429,23 @@ async function exportCSV() {
         const room = getRoomById(item.room);
         const cabinet = getCabinetById(item.cabinet);
         return csvRow([
-            item.name,
-            item.quantity || 1,
+            item.name, item.quantity || 1,
             room ? room.name : item.room,
             cabinet ? cabinet.code : item.cabinet,
             cabinet ? cabinet.name : '',
-            item.level,
-            item.box || '',
-            item.remark || '',
-            item.createTime || '',
-            item.updateTime || ''
+            item.level, item.box || '', item.remark || '',
+            item.createTime || '', item.updateTime || ''
         ]);
     });
-    return [header, ...rows].join('\n');
+
+    // 追加柜子对照表
+    const refHeader = '\n\n===柜子对照表（房间,柜子编号,柜子名称,可用层数）===';
+    const refRows = Object.values(CABINETS).map(c => {
+        const room = getRoomById(c.room);
+        return csvRow([room ? room.name : c.room, c.code, c.name, c.levels.join('/')]);
+    });
+
+    return [header, ...rows, refHeader, ...refRows].join('\n');
 }
 
 function csvRow(fields) {

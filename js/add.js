@@ -50,6 +50,19 @@ async function renderAddPage(params) {
             </div>
 
             <form id="item-form" class="item-form" autocomplete="off">
+                <!-- 录入模式切换（仅新增模式） -->
+                ${!isEdit ? `
+                <div class="form-group">
+                    <label class="form-label">录入模式</label>
+                    <div class="mode-toggle" id="batch-toggle">
+                        <button type="button" class="mode-btn mode-active" data-batch="0">📝 逐个录入</button>
+                        <button type="button" class="mode-btn" data-batch="1">📋 批量录入</button>
+                    </div>
+                </div>
+                ` : ''}
+
+                <!-- ====== 单个录入区域 ====== -->
+                <div id="single-mode">
                 <!-- 物品名称（必填） -->
                 <div class="form-group">
                     <label class="form-label" for="item-name">
@@ -156,8 +169,19 @@ async function renderAddPage(params) {
                         placeholder="补充说明（可选）">${existingItem ? escapeHtml(existingItem.remark || '') : ''}</textarea>
                 </div>
 
+                </div><!-- /single-mode -->
+
+                <!-- ====== 批量录入区域 ====== -->
+                <div id="batch-mode" style="display:none">
+                    <div id="batch-rows"></div>
+                    <button type="button" class="btn btn-secondary btn-full" id="btn-add-row" style="margin-bottom:8px">＋ 添加一行</button>
+                    <button type="button" class="btn btn-primary btn-lg btn-full" id="btn-batch-save">✅ 全部保存</button>
+                    <button type="button" class="btn btn-secondary btn-lg btn-full"
+                        onclick="router.navigate('/search')">取消</button>
+                </div>
+
                 <!-- 按钮 -->
-                <div class="form-actions">
+                <div class="form-actions" id="single-actions">
                     <button type="submit" class="btn btn-primary btn-lg btn-full">
                         ${isEdit ? '💾 保存修改' : '✅ 确认添加'}
                     </button>
@@ -320,6 +344,83 @@ async function renderAddPage(params) {
         // 编辑模式默认列表
         setMode('list');
     }
+
+    // ---- 批量/单个模式切换 ----
+    const singleMode = $('#single-mode');
+    const batchMode  = $('#batch-mode');
+    const singleActions = $('#single-actions');
+    let isBatch = false;
+
+    if ($('#batch-toggle')) {
+        $$('#batch-toggle .mode-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                isBatch = this.dataset.batch === '1';
+                $$('#batch-toggle .mode-btn').forEach(b => b.classList.remove('mode-active'));
+                this.classList.add('mode-active');
+                if (isBatch) {
+                    singleMode.style.display = 'none';
+                    singleActions.style.display = 'none';
+                    batchMode.style.display = '';
+                    if ($('#batch-rows').children.length === 0) addBatchRow();
+                } else {
+                    singleMode.style.display = '';
+                    singleActions.style.display = '';
+                    batchMode.style.display = 'none';
+                }
+            });
+        });
+    }
+
+    const defaultRoom = (params && params.room) || 'K';
+
+    function _addSelect(id, optionsHtml) { const el = createElement('select', { id, className: 'form-select' }); el.innerHTML = optionsHtml; return el; }
+
+    function addBatchRow() {
+        const idx = Date.now();
+        const row = createElement('div', { className: 'batch-row', dataset: { idx } }, [
+            createElement('input', { type: 'text', className: 'form-input', placeholder: '物品名称', style: 'width:100px', 'data-field': 'name' }),
+            _addSelect(`b-room-${idx}`, getAllRooms().map(r => `<option value="${r.id}" ${r.id===defaultRoom?'selected':''}>${r.icon}${r.name}</option>`).join('')),
+            _addSelect(`b-cab-${idx}`, '<option value="">柜子</option>'),
+            _addSelect(`b-lvl-${idx}`, '<option value="">层</option>'),
+            createElement('input', { type: 'number', className: 'form-input', value: '1', min: '1', style: 'width:50px', 'data-field': 'qty' }),
+            createElement('button', { type: 'button', className: 'btn btn-danger', style: 'padding:4px 8px;font-size:11px', onClick: () => row.remove() }, '✕'),
+        ]);
+        $('#batch-rows').appendChild(row);
+
+        const roomSel = $(`#b-room-${idx}`);
+        const cabSel  = $(`#b-cab-${idx}`);
+        const lvlSel  = $(`#b-lvl-${idx}`);
+        roomSel.addEventListener('change', () => updateCabinetSelect(roomSel.value, cabSel, lvlSel, null));
+        cabSel.addEventListener('change',  () => updateLevelSelect(cabSel.value, lvlSel, null));
+        updateCabinetSelect(defaultRoom, cabSel, lvlSel, null);
+    }
+
+    $('#btn-add-row').addEventListener('click', addBatchRow);
+
+    $('#btn-batch-save').addEventListener('click', async () => {
+        const rows = $$('#batch-rows .batch-row');
+        let saved = 0;
+        for (const row of rows) {
+            const name = (row.querySelector('[data-field="name"]') || {}).value;
+            const qty = parseInt((row.querySelector('[data-field="qty"]') || {}).value) || 1;
+            const roomSel = row.querySelector('select[id^="b-room-"]');
+            const cabSel  = row.querySelector('select[id^="b-cab-"]');
+            const lvlSel  = row.querySelector('select[id^="b-lvl-"]');
+            if (!name || !name.trim() || !cabSel || !cabSel.value || !lvlSel || !lvlSel.value) continue;
+            try {
+                await addItem({ name: name.trim(), room: roomSel.value, cabinet: cabSel.value, level: lvlSel.value, quantity: qty });
+                saved++;
+            } catch (e) { console.warn('保存失败:', name, e); }
+        }
+        if (saved > 0) {
+            showToast(`已保存 ${saved} 件物品`, 'success');
+            // 清空表格
+            $$('#batch-rows .batch-row').forEach(r => r.remove());
+            addBatchRow();
+        } else {
+            showToast('没有可保存的物品', 'error');
+        }
+    });
 
     // ---- 表单提交 ----
     const form = $('#item-form');
